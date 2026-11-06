@@ -1,0 +1,8 @@
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY_FORMAT",
+    "message": "Invalid API key format",
+    "timestamp": "2026-11-05T21:11:31.240Z"
+  }
+}

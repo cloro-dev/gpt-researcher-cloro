@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gpt-researcher-cloro"
+version = "0.1.0"
+description = "cloro retrievers for GPT Researcher: Google results and Google AI Mode answers with sources."
+authors = [{ name = "cloro", email = "support@cloro.dev" }]
+requires-python = ">=3.12"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["gpt-researcher", "retriever", "cloro", "google", "ai-mode", "web-search"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+# 0.16.1 is the first release that loads retrievers from the entry-point group.
+dependencies = [
+    "gpt-researcher>=0.16.1",
+    "requests>=2.31",
+]
+
+[project.entry-points."gpt_researcher.retrievers"]
+cloro = "gpt_researcher_cloro:CloroSearch"
+cloro_aimode = "gpt_researcher_cloro:CloroAIModeSearch"
+
+[project.urls]
+Homepage = "https://cloro.dev/?utm_source=gpt-researcher-cloro&utm_medium=byok"
+Documentation = "https://cloro.dev/docs/?utm_source=gpt-researcher-cloro&utm_medium=byok"
+Repository = "https://github.com/cloro-dev/gpt-researcher-cloro"
+Issues = "https://github.com/cloro-dev/gpt-researcher-cloro/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.11",
+]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "tests/", "LICENSE", "README.md"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gpt_researcher_cloro"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
