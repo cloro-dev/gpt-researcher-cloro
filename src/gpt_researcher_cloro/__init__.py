@@ -4,11 +4,12 @@ Install next to GPT Researcher (0.16.1 or later) and select a retriever by name:
 
     pip install gpt-researcher-cloro
     export CLORO_API_KEY=...
-    export RETRIEVER=cloro          # Google organic results
-    export RETRIEVER=cloro_aimode   # Google AI Mode answer and its sources
+    export RETRIEVER=cloro               # Google organic results
+    export RETRIEVER=cloro_aimode        # Google AI Mode answer and its sources
+    export RETRIEVER=cloro_bing_aimode   # Bing AI Mode answer and its sources
 
-The two retrievers are registered under the ``gpt_researcher.retrievers``
-entry-point group. Both return ``[]`` on any failure, so one provider cannot
+The three retrievers are registered under the ``gpt_researcher.retrievers``
+entry-point group. All return ``[]`` on any failure, so one provider cannot
 stop a research run.
 """
 
@@ -21,8 +22,8 @@ from urllib.parse import quote_plus
 
 import requests
 
-__all__ = ["CloroAIModeSearch", "CloroSearch"]
-__version__ = "0.1.0"
+__all__ = ["CloroAIModeSearch", "CloroBingAIModeSearch", "CloroSearch"]
+__version__ = "0.2.0"
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ API_BASE = "https://api.cloro.dev"
 DEFAULT_COUNTRY = "US"
 # The body of a link result is a preview. GPT Researcher scrapes the page.
 MAX_BODY_CHARS = 500
-# Google results arrive in a few seconds. AI Mode answers can take a minute.
+# Google results arrive in a few seconds. AI answers can take a minute.
 GOOGLE_TIMEOUT_SECONDS = 60
 AIMODE_TIMEOUT_SECONDS = 180
 
@@ -130,17 +131,20 @@ class CloroSearch:
         return results[:limit]
 
 
-class CloroAIModeSearch:
-    """Google AI Mode answer and its cited sources from ``POST /v1/monitor/aimode``.
+class _AnswerSearch:
+    """An AI answer and its cited sources from one cloro monitor endpoint.
 
-    The first result is the AI Mode answer text, given as ``raw_content`` so
-    GPT Researcher uses it without a scrape. Its ``href`` is the Google AI Mode
-    URL for the query. The other results are the sources that the answer cites.
-    They have no ``raw_content``, so GPT Researcher scrapes them. One request
-    costs 6 cloro credits. ``query_domains`` is accepted but not applied.
+    The first result is the answer text, given as ``raw_content`` so GPT
+    Researcher uses it without a scrape. Its ``href`` is the engine's URL for
+    the query. The other results are the sources that the answer cites. They
+    have no ``raw_content``, so GPT Researcher scrapes them.
+    ``query_domains`` is accepted but not applied.
     """
 
     requires_scraping = False
+    path = ""
+    engine = ""
+    answer_url = ""
 
     def __init__(self, query: str, query_domains: list[str] | None = None, **kwargs: Any):
         self.query = query
@@ -150,7 +154,7 @@ class CloroAIModeSearch:
     def search(self, max_results: int = 7) -> list[dict[str, Any]]:
         limit = max(1, int(max_results or 7))
         result = _post(
-            "/v1/monitor/aimode",
+            self.path,
             {"prompt": self.query, "country": self.country, "include": {"markdown": True}},
             self.api_key,
             AIMODE_TIMEOUT_SECONDS,
@@ -162,10 +166,10 @@ class CloroAIModeSearch:
         if answer.strip():
             results.append(
                 {
-                    "title": f"Google AI Mode: {self.query}",
-                    "href": f"https://www.google.com/search?udm=50&q={quote_plus(self.query)}",
+                    "title": f"{self.engine}: {self.query}",
+                    "href": self.answer_url + quote_plus(self.query),
                     "body": _preview(answer),
-                    "raw_content": f"Google AI Mode answer to: {self.query}\n\n{answer}",
+                    "raw_content": f"{self.engine} answer to: {self.query}\n\n{answer}",
                 }
             )
         seen = set()
@@ -182,3 +186,29 @@ class CloroAIModeSearch:
                 }
             )
         return results[:limit]
+
+
+class CloroAIModeSearch(_AnswerSearch):
+    """Google AI Mode answer and its cited sources from ``POST /v1/monitor/aimode``.
+
+    The answer ``href`` is the Google AI Mode URL for the query. One request
+    costs 6 cloro credits.
+    """
+
+    path = "/v1/monitor/aimode"
+    engine = "Google AI Mode"
+    answer_url = "https://www.google.com/search?udm=50&q="
+
+
+class CloroBingAIModeSearch(_AnswerSearch):
+    """Bing AI Mode answer and its cited sources from ``POST /v1/monitor/bing/aimode``.
+
+    The answer ``href`` is the Bing AI Mode URL (``bing.com/copilotsearch``)
+    for the query. One request costs 6 cloro credits. Bing puts the prompt in
+    the page URL, so cloro rejects a prompt longer than 3,500 characters after
+    URL encoding. The retriever then returns ``[]``.
+    """
+
+    path = "/v1/monitor/bing/aimode"
+    engine = "Bing AI Mode"
+    answer_url = "https://www.bing.com/copilotsearch?q="

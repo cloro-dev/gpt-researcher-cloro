@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gpt-researcher-cloro"
-version = "0.1.0"
-description = "cloro retrievers for GPT Researcher: Google results and Google AI Mode answers with sources."
+version = "0.2.0"
+description = "cloro retrievers for GPT Researcher: Google results, and Google AI Mode and Bing AI Mode answers with sources."
 authors = [{ name = "cloro", email = "support@cloro.dev" }]
 requires-python = ">=3.12"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["gpt-researcher", "retriever", "cloro", "google", "ai-mode", "web-search"]
+keywords = ["gpt-researcher", "retriever", "cloro", "google", "ai-mode", "bing", "web-search"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
@@ -27,6 +27,7 @@ dependencies = [
 [project.entry-points."gpt_researcher.retrievers"]
 cloro = "gpt_researcher_cloro:CloroSearch"
 cloro_aimode = "gpt_researcher_cloro:CloroAIModeSearch"
+cloro_bing_aimode = "gpt_researcher_cloro:CloroBingAIModeSearch"
 
 [project.urls]
 Homepage = "https://cloro.dev/?utm_source=gpt-researcher-cloro&utm_medium=byok"
