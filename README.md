@@ -1,12 +1,13 @@
 # gpt-researcher-cloro
 
 [cloro](https://cloro.dev/?utm_source=gpt-researcher-cloro&utm_medium=byok) retrievers for
-[GPT Researcher](https://github.com/assafelovic/gpt-researcher). The package adds two retrievers:
+[GPT Researcher](https://github.com/assafelovic/gpt-researcher). The package adds three retrievers:
 
 | `RETRIEVER` | cloro endpoint | Returns | Credits per search |
 |---|---|---|--:|
 | `cloro` | `POST /v1/monitor/google` | Google organic results (about 10 links per search) | 5 |
 | `cloro_aimode` | `POST /v1/monitor/aimode` | The Google AI Mode answer, then the sources it cites | 6 |
+| `cloro_bing_aimode` | `POST /v1/monitor/bing/aimode` | The Bing AI Mode answer, then the sources it cites | 6 |
 
 GPT Researcher (0.16.1 or later) finds the retrievers through the `gpt_researcher.retrievers`
 entry point. You do not change GPT Researcher.
@@ -20,7 +21,7 @@ entry point. You do not change GPT Researcher.
 ```bash
 pip install gpt-researcher-cloro
 export CLORO_API_KEY="your-cloro-key"
-export RETRIEVER=cloro            # or cloro_aimode, or cloro,cloro_aimode
+export RETRIEVER=cloro            # or cloro_aimode, cloro_bing_aimode, or cloro,cloro_aimode
 ```
 
 You can combine the retrievers with built-in retrievers, for example `RETRIEVER=cloro_aimode,arxiv`.
@@ -30,7 +31,7 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 | Variable | Default | Purpose |
 |---|---|---|
 | `CLORO_API_KEY` | unset | Required. Sent as `Authorization: Bearer <key>`. |
-| `CLORO_COUNTRY` | `US` | ISO 3166-1 alpha-2 country code for the Google or AI Mode location. |
+| `CLORO_COUNTRY` | `US` | ISO 3166-1 alpha-2 country code for the Google, AI Mode or Bing AI Mode location. Bing AI Mode accepts all countries except KR and RU. |
 
 ## Behaviour
 
@@ -53,11 +54,21 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 - `query_domains` is accepted but not applied.
 - An AI Mode answer can take 15 seconds or more. The request timeout is 180 seconds.
 
-Both retrievers:
+`cloro_bing_aimode`:
+
+- The same result shape as `cloro_aimode`. The first result is the Bing AI Mode answer (Markdown) under
+  `raw_content`. Its `href` is the Bing AI Mode URL for the query
+  (`https://www.bing.com/copilotsearch?q=...`). The next results are the sources that the answer cites.
+- Bing puts the prompt in the page URL, so the limit is 3,500 characters after URL encoding. Non-Latin
+  scripts get fewer characters. cloro rejects a longer prompt with a `400` error, and the retriever
+  gives `[]`. GPT Researcher sub-queries are short, so this limit applies only to a very long query.
+- The request timeout is 180 seconds.
+
+All retrievers:
 
 - Each search is one cloro request. With the default `MAX_ITERATIONS=3`, a `research_report` makes
   5 searches per retriever (1 initial search, 3 sub-queries and the original query). That is 25 credits
-  with `cloro` and 30 credits with `cloro_aimode`. Other report types can make more searches.
+  with `cloro`, and 30 credits with `cloro_aimode` or `cloro_bing_aimode`. Other report types can make more searches.
 - A missing key, a network error, an HTTP error (for example `INSUFFICIENT_CREDITS`) or a response that
   cannot be read is logged and gives `[]`. One failed provider does not stop a research run.
 
