@@ -12,7 +12,7 @@ import pytest
 import requests
 
 import gpt_researcher_cloro as plugin
-from gpt_researcher_cloro import CloroAIModeSearch, CloroBingAIModeSearch, CloroSearch
+from gpt_researcher_cloro import CloroAIModeSearch, CloroBingAIModeSearch, CloroBingSearch, CloroSearch
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -62,6 +62,7 @@ def post(monkeypatch):
 def test_entry_points_are_registered():
     names = {ep.name: ep.value for ep in entry_points(group="gpt_researcher.retrievers")}
     assert names["cloro"] == "gpt_researcher_cloro:CloroSearch"
+    assert names["cloro_bing"] == "gpt_researcher_cloro:CloroBingSearch"
     assert names["cloro_aimode"] == "gpt_researcher_cloro:CloroAIModeSearch"
     assert names["cloro_bing_aimode"] == "gpt_researcher_cloro:CloroBingAIModeSearch"
 
@@ -69,6 +70,7 @@ def test_entry_points_are_registered():
 def test_gpt_researcher_resolves_plugin_names():
     retriever = pytest.importorskip("gpt_researcher.actions.retriever")
     assert retriever.get_retriever("cloro") is CloroSearch
+    assert retriever.get_retriever("cloro_bing") is CloroBingSearch
     assert retriever.get_retriever("cloro_aimode") is CloroAIModeSearch
     assert retriever.get_retriever("cloro_bing_aimode") is CloroBingAIModeSearch
 
@@ -116,6 +118,27 @@ def test_country_from_env(post, monkeypatch):
 
 def test_accepts_extra_constructor_kwargs(post):
     CloroSearch("q", query_domains=None, headers={}, websocket=None, researcher=None).search()
+
+
+# Bing retriever
+
+
+def test_bing_request(post):
+    post.state["resp"] = _Resp(_load("bing.json"))
+    CloroBingSearch("season a wok", query_domains=["a.com"]).search()
+    call = post.calls[0]
+    assert call["url"] == "https://api.cloro.dev/v1/monitor/bing"
+    assert call["json"] == {"query": "season a wok site:a.com", "country": "US"}
+
+
+def test_bing_results(post):
+    payload = _load("bing.json")
+    post.state["resp"] = _Resp(payload)
+    results = CloroBingSearch("season a wok").search(max_results=10)
+    assert [r["href"] for r in results] == [r["link"] for r in payload["result"]["organicResults"]]
+    assert results[0]["title"] == "How to Season a Wok"
+    assert all(set(r) == {"title", "href", "body"} for r in results)
+    assert CloroBingSearch.requires_scraping is True
 
 
 # AI Mode retriever
@@ -191,14 +214,14 @@ def test_bing_aimode_respects_max_results(post):
 # Failures return []
 
 
-@pytest.mark.parametrize("cls", [CloroSearch, CloroAIModeSearch, CloroBingAIModeSearch])
+@pytest.mark.parametrize("cls", [CloroSearch, CloroBingSearch, CloroAIModeSearch, CloroBingAIModeSearch])
 def test_missing_key_returns_empty_without_request(post, monkeypatch, cls):
     monkeypatch.delenv("CLORO_API_KEY")
     assert cls("q").search() == []
     assert post.calls == []
 
 
-@pytest.mark.parametrize("cls", [CloroSearch, CloroAIModeSearch, CloroBingAIModeSearch])
+@pytest.mark.parametrize("cls", [CloroSearch, CloroBingSearch, CloroAIModeSearch, CloroBingAIModeSearch])
 @pytest.mark.parametrize(
     "resp",
     [

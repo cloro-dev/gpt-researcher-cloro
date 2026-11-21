@@ -5,10 +5,11 @@ Install next to GPT Researcher (0.16.1 or later) and select a retriever by name:
     pip install gpt-researcher-cloro
     export CLORO_API_KEY=...
     export RETRIEVER=cloro               # Google organic results
+    export RETRIEVER=cloro_bing          # Bing organic results
     export RETRIEVER=cloro_aimode        # Google AI Mode answer and its sources
     export RETRIEVER=cloro_bing_aimode   # Bing AI Mode answer and its sources
 
-The three retrievers are registered under the ``gpt_researcher.retrievers``
+The four retrievers are registered under the ``gpt_researcher.retrievers``
 entry-point group. All return ``[]`` on any failure, so one provider cannot
 stop a research run.
 """
@@ -22,8 +23,8 @@ from urllib.parse import quote_plus
 
 import requests
 
-__all__ = ["CloroAIModeSearch", "CloroBingAIModeSearch", "CloroSearch"]
-__version__ = "0.2.0"
+__all__ = ["CloroAIModeSearch", "CloroBingAIModeSearch", "CloroBingSearch", "CloroSearch"]
+__version__ = "0.3.0"
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ API_BASE = "https://api.cloro.dev"
 DEFAULT_COUNTRY = "US"
 # The body of a link result is a preview. GPT Researcher scrapes the page.
 MAX_BODY_CHARS = 500
-# Google results arrive in a few seconds. AI answers can take a minute.
+# Search results arrive in a few seconds. AI answers can take a minute.
 GOOGLE_TIMEOUT_SECONDS = 60
 AIMODE_TIMEOUT_SECONDS = 180
 
@@ -97,6 +98,7 @@ class CloroSearch:
     """
 
     requires_scraping = True
+    path = "/v1/monitor/google"
 
     def __init__(self, query: str, query_domains: list[str] | None = None, **kwargs: Any):
         self.query = query
@@ -112,7 +114,7 @@ class CloroSearch:
     def search(self, max_results: int = 7) -> list[dict[str, Any]]:
         limit = max(1, int(max_results or 7))
         result = _post(
-            "/v1/monitor/google",
+            self.path,
             {"query": self._query(), "country": self.country},
             self.api_key,
             GOOGLE_TIMEOUT_SECONDS,
@@ -129,6 +131,18 @@ class CloroSearch:
             if isinstance(item, dict) and _is_direct_link(item.get("link"))
         ]
         return results[:limit]
+
+
+class CloroBingSearch(CloroSearch):
+    """Bing organic results from ``POST /v1/monitor/bing``.
+
+    The same result shape as ``CloroSearch``. One request costs 5 cloro
+    credits and returns one page of Bing results. Bing puts the query in the
+    page URL, so cloro rejects a query longer than 3,500 characters after URL
+    encoding. The retriever then returns ``[]``.
+    """
+
+    path = "/v1/monitor/bing"
 
 
 class _AnswerSearch:
