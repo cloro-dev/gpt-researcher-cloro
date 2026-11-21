@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gpt-researcher-cloro"
-version = "0.2.0"
-description = "cloro retrievers for GPT Researcher: Google results, and Google AI Mode and Bing AI Mode answers with sources."
+version = "0.3.0"
+description = "cloro retrievers for GPT Researcher: Google and Bing results, and Google AI Mode and Bing AI Mode answers with sources."
 authors = [{ name = "cloro", email = "support@cloro.dev" }]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -26,6 +26,7 @@ dependencies = [
 
 [project.entry-points."gpt_researcher.retrievers"]
 cloro = "gpt_researcher_cloro:CloroSearch"
+cloro_bing = "gpt_researcher_cloro:CloroBingSearch"
 cloro_aimode = "gpt_researcher_cloro:CloroAIModeSearch"
 cloro_bing_aimode = "gpt_researcher_cloro:CloroBingAIModeSearch"
 

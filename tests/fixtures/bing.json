@@ -1,0 +1,59 @@
+{
+  "success": true,
+  "result": {
+    "organicResults": [
+      {
+        "position": 1,
+        "title": "How to Season a Wok",
+        "link": "https://www.wokandskillet.com/how-to-season-a-wok/",
+        "displayedLink": "https://www.wokandskillet.com › how-to-season-a-wok",
+        "snippet": "Wash the wok, heat it until the water evaporates, then coat it with a thin layer of oil.",
+        "page": 1
+      },
+      {
+        "position": 2,
+        "title": "How to Season a Wok - The Woks of Life",
+        "link": "https://thewoksoflife.com/how-to-season-a-wok/",
+        "displayedLink": "https://thewoksoflife.com › how-to-season-a-wok",
+        "snippet": "Seasoning a carbon steel wok gives it a natural nonstick surface.",
+        "page": 1
+      },
+      {
+        "position": 3,
+        "title": "3 Ways to Season a Wok - wikiHow",
+        "link": "https://www.wikihow.com/Season-a-Wok",
+        "displayedLink": "https://www.wikihow.com › Season-a-Wok",
+        "snippet": "Heat the wok over high heat, add oil and swirl it to coat the inside evenly.",
+        "page": 1,
+        "date": "Apr 5, 2024"
+      }
+    ],
+    "aioverview": {
+      "text": "Seasoning a carbon steel or cast iron wok means heating a thin layer of oil until it polymerizes.",
+      "sources": [
+        {
+          "position": 1,
+          "label": "Wok & Skillet",
+          "url": "https://www.wokandskillet.com/how-to-season-a-wok/",
+          "description": null
+        },
+        {
+          "position": 2,
+          "label": "Umamicart",
+          "url": "https://www.umamicart.com/how-to-season-a-wok/",
+          "description": null
+        }
+      ],
+      "citationPills": [
+        {
+          "position": 1,
+          "label": "Wok & Skillet",
+          "url": "https://www.wokandskillet.com/how-to-season-a-wok/",
+          "domain": "wokandskillet.com",
+          "citationPillId": 1
+        }
+      ],
+      "markdown": "Seasoning a carbon steel or cast iron wok means **heating a thin layer of oil until it polymerizes**.[Wok & Skillet](https://www.wokandskillet.com/how-to-season-a-wok/)"
+    }
+  }
+}
