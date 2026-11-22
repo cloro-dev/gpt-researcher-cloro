@@ -33,6 +33,7 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 |---|---|---|
 | `CLORO_API_KEY` | unset | Required. Sent as `Authorization: Bearer <key>`. |
 | `CLORO_COUNTRY` | `US` | ISO 3166-1 alpha-2 country code for the engine location. Bing and Bing AI Mode accept all countries except CN, KR and RU. |
+| `CLORO_INCLUDE_ADS` | `false` | Set it to `true` to add the ads on the page to the results of `cloro` and `cloro_bing`. The ads cost no more credits. |
 
 ## Behaviour
 
@@ -40,7 +41,7 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 
 - Each result is `{"title", "href", "body"}`. `body` is the Google snippet, cut to 500 characters.
   The retriever sets `requires_scraping = True`, so GPT Researcher scrapes each page.
-- The retriever returns the organic results only, and not the AI Overview or the ads.
+- The retriever returns the organic results, and not the AI Overview. To add the ads, set `CLORO_INCLUDE_ADS=true`.
 - One search returns one page of Google results. `MAX_SEARCH_RESULTS_PER_QUERY` above 10 gives no more results.
 - With `query_domains`, the query gets `site:` filters joined with `OR`.
 - Results with an empty link or a Google redirect (`google.com/goto`) link are skipped.
@@ -49,12 +50,21 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 
 - The same result shape as `cloro`, with Bing organic results. `body` is the Bing snippet.
   The retriever sets `requires_scraping = True`, so GPT Researcher scrapes each page.
-- The retriever returns the organic results only, and not the AI Overview or the ads.
+- The retriever returns the organic results, and not the AI Overview. To add the ads, set `CLORO_INCLUDE_ADS=true`.
 - One search returns one page of Bing results. `CLORO_COUNTRY` sets the Bing market.
 - With `query_domains`, the query gets `site:` filters joined with `OR`.
 - Bing puts the query in the page URL, so the limit is 3,500 characters after URL encoding. Non-Latin
   scripts get fewer characters. cloro rejects a longer query with a `400` error, and the retriever
   gives `[]`.
+
+`cloro` and `cloro_bing` with `CLORO_INCLUDE_ADS=true`:
+
+- When the page has ads, one more result comes after the organic results. Its `raw_content` lists all ads, and
+  each ad starts with `Google ad` or `Bing ad`. `source` is `google_ad` or `bing_ad`, and `href` is the URL of
+  the results page. `max_results` does not count this result.
+- GPT Researcher uses this text without a scrape. It does not open the ad URLs, because that is a click on the ad.
+- The retriever sets `requires_scraping = False` so that GPT Researcher keeps the text. GPT Researcher still
+  scrapes each organic result.
 
 `cloro_aimode`:
 

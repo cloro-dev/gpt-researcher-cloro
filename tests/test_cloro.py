@@ -37,6 +37,7 @@ class _Resp:
 def _env(monkeypatch):
     monkeypatch.setenv("CLORO_API_KEY", "test-key")
     monkeypatch.delenv("CLORO_COUNTRY", raising=False)
+    monkeypatch.delenv("CLORO_INCLUDE_ADS", raising=False)
 
 
 @pytest.fixture
@@ -139,6 +140,80 @@ def test_bing_results(post):
     assert results[0]["title"] == "How to Season a Wok"
     assert all(set(r) == {"title", "href", "body"} for r in results)
     assert CloroBingSearch.requires_scraping is True
+
+
+# Ads
+
+ADS = [
+    {
+        "position": 1,
+        "blockPosition": "top",
+        "type": "RESULT",
+        "title": "Wok Sale",
+        "url": "https://shop.example/woks",
+        "page": 1,
+        "description": "Carbon steel woks.",
+    },
+    {
+        "position": 1,
+        "blockPosition": "rhs",
+        "type": "SHOPPING_CARD",
+        "title": "14 in Wok",
+        "url": "https://shop.example/wok-14",
+        "page": 1,
+        "price": {"value": 29, "currency": "$", "raw": "$29.00"},
+        "store": "Shop",
+    },
+    {},
+]
+
+
+@pytest.mark.parametrize(
+    ("cls", "fixture", "engine", "href"),
+    [
+        (CloroSearch, "google.json", "Google", "https://www.google.com/search?q=season+a+wok"),
+        (CloroBingSearch, "bing.json", "Bing", "https://www.bing.com/search?q=season+a+wok"),
+    ],
+)
+def test_ads_are_one_marked_result(post, monkeypatch, cls, fixture, engine, href):
+    monkeypatch.setenv("CLORO_INCLUDE_ADS", "true")
+    payload = _load(fixture)
+    payload["result"]["ads"] = ADS
+    post.state["resp"] = _Resp(payload)
+    retriever = cls("season a wok")
+    results = retriever.search(max_results=2)
+    assert post.calls[0]["json"] == {"query": "season a wok", "country": "US"}
+    assert len(results) == 3
+    assert all("raw_content" not in r for r in results[:2])
+    assert retriever.requires_scraping is False
+    ads = results[2]
+    assert ads["title"] == f"{engine} ads: season a wok"
+    assert ads["href"] == href
+    assert ads["source"] == f"{engine.lower()}_ad"
+    assert ads["raw_content"] == (
+        f"{engine} ads for: season a wok\n\n"
+        f"{engine} ad (RESULT top 1): Wok Sale\nhttps://shop.example/woks\nCarbon steel woks.\n\n"
+        f"{engine} ad (SHOPPING_CARD rhs 1): 14 in Wok\nhttps://shop.example/wok-14\n$29.00\nShop\n\n"
+        f"{engine} ad ():"
+    )
+
+
+@pytest.mark.parametrize("value", [None, "", "false", "0"])
+def test_ads_off_by_default(post, monkeypatch, value):
+    if value is not None:
+        monkeypatch.setenv("CLORO_INCLUDE_ADS", value)
+    payload = _load("bing.json")
+    payload["result"]["ads"] = ADS
+    post.state["resp"] = _Resp(payload)
+    retriever = CloroBingSearch("q")
+    assert all(set(r) == {"title", "href", "body"} for r in retriever.search())
+    assert retriever.requires_scraping is True
+
+
+def test_include_ads_without_ads(post, monkeypatch):
+    monkeypatch.setenv("CLORO_INCLUDE_ADS", "true")
+    post.state["resp"] = _Resp(_load("bing.json"))
+    assert len(CloroBingSearch("q").search()) == 3
 
 
 # AI Mode retriever
