@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gpt-researcher-cloro"
-version = "0.3.0"
+version = "0.4.0"
 description = "cloro retrievers for GPT Researcher: Google and Bing results, and Google AI Mode and Bing AI Mode answers with sources."
 authors = [{ name = "cloro", email = "support@cloro.dev" }]
 requires-python = ">=3.12"

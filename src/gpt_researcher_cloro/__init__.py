@@ -24,7 +24,7 @@ from urllib.parse import quote_plus
 import requests
 
 __all__ = ["CloroAIModeSearch", "CloroBingAIModeSearch", "CloroBingSearch", "CloroSearch"]
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,10 @@ def _settings() -> tuple[str, str]:
     api_key = (os.environ.get("CLORO_API_KEY") or "").strip()
     country = (os.environ.get("CLORO_COUNTRY") or DEFAULT_COUNTRY).strip().upper()
     return api_key, country
+
+
+def _include_ads() -> bool:
+    return (os.environ.get("CLORO_INCLUDE_ADS") or "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _preview(text: Any) -> str:
@@ -95,15 +99,28 @@ class CloroSearch:
     Results are links with a short snippet (``requires_scraping = True``).
     GPT Researcher scrapes each page for its content. One request costs
     5 cloro credits and returns one page of Google results (about 10 links).
+
+    With ``CLORO_INCLUDE_ADS=true``, the last result lists the ads on the page
+    as ``raw_content``. GPT Researcher must use that text without a scrape, so
+    the instance then sets ``requires_scraping = False``. The organic results
+    have no ``raw_content``, so GPT Researcher scrapes them in both cases.
+    The ads are not links of their own, because a scrape of an ad URL is a
+    click on the ad.
     """
 
     requires_scraping = True
     path = "/v1/monitor/google"
+    engine = "Google"
+    ads_source = "google_ad"
+    results_url = "https://www.google.com/search?q="
 
     def __init__(self, query: str, query_domains: list[str] | None = None, **kwargs: Any):
         self.query = query
         self.query_domains = [d.strip() for d in (query_domains or []) if d and d.strip()]
         self.api_key, self.country = _settings()
+        self.include_ads = _include_ads()
+        if self.include_ads:
+            self.requires_scraping = False
 
     def _query(self) -> str:
         if not self.query_domains:
@@ -130,7 +147,35 @@ class CloroSearch:
             for item in result.get("organicResults") or []
             if isinstance(item, dict) and _is_direct_link(item.get("link"))
         ]
-        return results[:limit]
+        results = results[:limit]
+        if self.include_ads:
+            ads = [self._ad_text(ad) for ad in result.get("ads") or [] if isinstance(ad, dict)]
+            if ads:
+                text = "\n\n".join(ads)
+                results.append(
+                    {
+                        "title": f"{self.engine} ads: {self.query}",
+                        "href": self.results_url + quote_plus(self._query()),
+                        "body": _preview(text),
+                        "raw_content": f"{self.engine} ads for: {self.query}\n\n{text}",
+                        "source": self.ads_source,
+                    }
+                )
+        return results
+
+    def _ad_text(self, ad: dict[str, Any]) -> str:
+        # Every field of an ad can be absent. Each ad names itself as an ad,
+        # because GPT Researcher can split the text.
+        place = " ".join(str(v) for v in (ad.get("type"), ad.get("blockPosition"), ad.get("position")) if v)
+        price = ad.get("price")
+        lines = [
+            f"{self.engine} ad ({place}): {ad.get('title') or ''}".strip(),
+            ad.get("url") if _is_direct_link(ad.get("url")) else None,
+            ad.get("description"),
+            price.get("raw") if isinstance(price, dict) else None,
+            ad.get("store"),
+        ]
+        return "\n".join(line for line in lines if line)
 
 
 class CloroBingSearch(CloroSearch):
@@ -143,6 +188,9 @@ class CloroBingSearch(CloroSearch):
     """
 
     path = "/v1/monitor/bing"
+    engine = "Bing"
+    ads_source = "bing_ad"
+    results_url = "https://www.bing.com/search?q="
 
 
 class _AnswerSearch:
