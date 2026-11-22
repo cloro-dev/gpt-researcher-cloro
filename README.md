@@ -40,6 +40,7 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 
 - Each result is `{"title", "href", "body"}`. `body` is the Google snippet, cut to 500 characters.
   The retriever sets `requires_scraping = True`, so GPT Researcher scrapes each page.
+- The retriever returns the organic results only, and not the AI Overview or the ads.
 - One search returns one page of Google results. `MAX_SEARCH_RESULTS_PER_QUERY` above 10 gives no more results.
 - With `query_domains`, the query gets `site:` filters joined with `OR`.
 - Results with an empty link or a Google redirect (`google.com/goto`) link are skipped.
@@ -48,6 +49,7 @@ You can combine the retrievers with built-in retrievers, for example `RETRIEVER=
 
 - The same result shape as `cloro`, with Bing organic results. `body` is the Bing snippet.
   The retriever sets `requires_scraping = True`, so GPT Researcher scrapes each page.
+- The retriever returns the organic results only, and not the AI Overview or the ads.
 - One search returns one page of Bing results. `CLORO_COUNTRY` sets the Bing market.
 - With `query_domains`, the query gets `site:` filters joined with `OR`.
 - Bing puts the query in the page URL, so the limit is 3,500 characters after URL encoding. Non-Latin
