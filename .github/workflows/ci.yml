@@ -1,0 +1,32 @@
+# Runs the tests on each pull request and on each push to main.
+# Branch protection on main requires the "test" checks of this workflow.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Python that requires-python allows, and the newest one that
+        # gpt-researcher installs on. onnxruntime has no wheel for Python 3.15.
+        python-version: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run the tests
+        run: uv run pytest
+      - name: Lint
+        run: uv run ruff check .
+      - name: Build the package
+        run: uv build
